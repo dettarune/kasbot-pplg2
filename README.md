@@ -8,6 +8,7 @@ Simple Discord Bot for manage classroom funds, check individual contributions, a
 
 - Check total funds: `!kas total` 💰
 - Check individual contribution status: `!kas {name}` 📊
+- Check individual contribution history: `!kas history {name}` 📜
 - List all commands: `!help` 🆘
 - More features will be added as this project grows 🚀
 
