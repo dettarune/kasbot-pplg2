@@ -52,7 +52,9 @@ client.on('messageCreate', async (message) => {
     const commandName = args.shift().toLowerCase();
 
     const command = client.commands.get(commandName);
-    if (!command) return;
+    if (!command) {
+        return message.reply(`Belum bikin command **${message.content.split(' ')[0]}**. Coba cek **!help** untuk daftar command yang ada.`);
+    };
 
     try {
         await command.execute(message, args, db, client);

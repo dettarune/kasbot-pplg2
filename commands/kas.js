@@ -15,9 +15,20 @@ function formattedKas(num) {
 
 module.exports = {
     name: 'kas',
-    description: 'All about kas command (cek total, cek status per orang, bayar kas)',
+    description: 'All about kas command',
+    subcommands: [
+        { name: 'total', description: 'Cek total kas saat ini' },
+        { name: '{nama}', description: 'Cek status kas per orang (bayar atau belum)' },
+        { name: 'history {nama}', description: 'Cek history pembayaran kas per orang' }
+    ],
     async execute(message, args, db, client) {
-        if (args[0] === 'total') {
+        if (!args[0]) {
+            return message.reply('Tolong sebutin subcommand atau nama, contoh: !kas total / !kas history Andi / !kas {nama}');
+        }
+
+        const sub = args[0].toLowerCase();
+
+        if (sub === 'total') {
             db.query('SELECT SUM(jumlah) AS total FROM kas', (err, results) => {
                 if (err) return message.reply('Error: ' + err.message);
 
@@ -30,11 +41,32 @@ module.exports = {
                 message.reply({ embeds: [embed] });
             });
         }
+        else if (sub === 'history') {
+            const nama = args.slice(1).join(' ');
+            if (!nama) return message.reply('Kurang sebutin nama, contoh: !kas history Andi');
 
-        else if (args.length > 0) {
+            db.query('SELECT * FROM kas WHERE nama = ? ORDER BY bulan, minggu', [nama], (err, results) => {
+                if (err) return message.reply('Error: ' + err.message);
+                if (results.length === 0) return message.reply(`Data kas si **${nama}** gaada.`);
+
+                let historyText = '';
+                results.forEach(r => {
+                    const bulanText = monthsMap[r.bulan] || r.bulan;
+                    const tgl = new Date(r.tanggal);
+                    const formattedDate = `${String(tgl.getDate()).padStart(2,'0')} ${bulanText} ${tgl.getFullYear()} ${String(tgl.getHours()).padStart(2,'0')}:${String(tgl.getMinutes()).padStart(2,'0')}`;
+                    historyText += `Bulan ${bulanText} Minggu ${r.minggu}: ${formattedKas(r.jumlah)} dibayar tgl ${formattedDate}\n`;
+                });
+
+                const embed = client.baseEmbed(message)
+                    .setColor(0xFFD700)
+                    .setTitle(`📜 History Kas ${nama}`)
+                    .setDescription(historyText);
+
+                message.reply({ embeds: [embed] });
+            });
+        }
+        else {
             const nama = args.join(' ');
-            console.log(`[DEBUG] Kas check for: ${nama}`);
-
             db.query('SELECT * FROM kas WHERE nama = ? ORDER BY bulan, minggu', [nama], (err, results) => {
                 if (err) return message.reply('Error: ' + err.message);
                 if (results.length === 0) return message.reply(`Data kas si **${nama}** gaada.`);
@@ -48,7 +80,7 @@ module.exports = {
 
                 for (let i = 1; i <= 4; i++) {
                     const bayar = results.find(r => r.minggu === i);
-                    if (bayar && bayar.jumlah >= 5000) {
+                    if (bayar && bayar.jumlah >= weeklyTarget) {
                         weeklyStatus += `Minggu ${i} : ✅\n`;
                     } else {
                         weeklyStatus += `Minggu ${i} : ❌ (bayar woi cuma 5 ribu)\n`;
@@ -71,11 +103,6 @@ module.exports = {
                     );
                 message.reply({ embeds: [embed] });
             });
-        }
-
-        else {
-            const userCommand = message.content.split(' ')[0];
-            message.reply(`Blm bikin command ${userCommand}. Baru ada "!kas total" sama "!kas {nama}"`);
         }
     }
 };
