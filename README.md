@@ -87,3 +87,5 @@ git push origin command/new-command
 ## License 📜
 
 MIT License
+
+Fiqar yaping
